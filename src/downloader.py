@@ -127,6 +127,16 @@ class MixamoDownloader(QtCore.QObject):
     self.finished.emit()
     return
 
+  def make_request(self, method, url, **kwargs):
+      for _ in range(10):  # Retry 10 times
+          try:
+              response = session.request(method, url, timeout=10, **kwargs)                
+              return response
+          except (requests.exceptions.Timeout, requests.exceptions.RequestException) as e:
+              time.sleep(1)
+              continue
+      raise Exception(f"Failed to complete request to {url} after 10 retries.")
+
   def get_primary_character_id(self):
     """Get the primary character ID (i.e: the one selected by the user).
 
@@ -134,7 +144,7 @@ class MixamoDownloader(QtCore.QObject):
     :rtype: str
     """
     # Send a GET request to the primary character endpoint.
-    response = session.get(
+    response = self.make_request("GET",
       f"https://www.mixamo.com/api/v1/characters/primary",
       headers=HEADERS)
 
@@ -150,7 +160,7 @@ class MixamoDownloader(QtCore.QObject):
     :rtype: str
     """
     # Send a GET request to the primary character endpoint.
-    response = session.get(
+    response = self.make_request("GET",
       f"https://www.mixamo.com/api/v1/characters/primary",
       headers=HEADERS)
 
@@ -181,7 +191,7 @@ class MixamoDownloader(QtCore.QObject):
       "product_name": self.product_name,
       "type": "Character",
       "preferences": {"format":"fbx7_2019", "mesh":"t-pose"},
-      "gms_hash": None
+      "gms_hash": None,
     }
 
     # Convert the payload dictionary into a JSON string.
@@ -200,13 +210,14 @@ class MixamoDownloader(QtCore.QObject):
 
     # Parameters to be passed onto the endpoint.
     params = {
-      "limit":96,
-      "page":page_num,
-      "type":"Motion",
+      "limit": 96,
+      "page": page_num,
+      "type": "Motion",
       "query": query}
 
     # Send a GET request to the animations endpoint.
-    response = session.get("https://www.mixamo.com/api/v1/products",
+    response = self.make_request("GET",
+      "https://www.mixamo.com/api/v1/products",
       headers=HEADERS,
       params=params)
 
@@ -221,7 +232,8 @@ class MixamoDownloader(QtCore.QObject):
     # Make sure we read every page and grab the animations therein.
     while page_num <= num_pages:
 
-      response = session.get("https://www.mixamo.com/api/v1/products",
+      response = self.make_request("GET",
+        "https://www.mixamo.com/api/v1/products",
         headers=HEADERS,
         params=params)
 
@@ -231,12 +243,8 @@ class MixamoDownloader(QtCore.QObject):
       animations.extend(data["results"])
       page_num += 1
 
-    # Initialize a dictionary to store IDs and names.
-    anim_data = {}
-
-    # Iterate animations found by the query and add them to the dictionary. 
-    for animation in animations:      
-      anim_data[animation["id"]] = animation["description"]
+    # Create the unique animation ids
+    anim_data = {animation["id"]: animation["description"] for animation in animations}
 
     # Let the UI know how many animations are to be downloaded.
     self.total_tasks.emit(len(anim_data))    
@@ -283,14 +291,14 @@ class MixamoDownloader(QtCore.QObject):
     :rtype: str
     """
     # Send a GET request to the animation-on-character endpoint.
-    response = session.get(
+    response = self.make_request("GET",
       f"https://www.mixamo.com/api/v1/products/{anim_id}?similar=0&character_id={character_id}",
       headers=HEADERS)
 
     # Get the animation description (make it public so that we can use it later).
     # We're using the description because some anims have the same name and this
     # would cause them to be overriden when downloading to disk.
-    self.product_name = response.json()["description"]
+    self.product_name = response.json().get("description")
     # Get the animation type.
     _type = response.json()["type"]
 
@@ -299,8 +307,8 @@ class MixamoDownloader(QtCore.QObject):
     preferences =   {
       "format": "fbx7_2019",
       "skin": False,
-      "fps": "24",
-      "reducekf": "0"
+      "fps": "30",
+      "reducekf": "0",
     }
 
     # Get the original 'gms_hash' property.
@@ -330,7 +338,7 @@ class MixamoDownloader(QtCore.QObject):
         "product_name": self.product_name,
         "type": _type,
         "preferences": preferences,
-        "gms_hash": [gms_hash]
+        "gms_hash": [gms_hash],
     }
 
     # Convert the payload dictionary into a JSON string.
@@ -351,7 +359,8 @@ class MixamoDownloader(QtCore.QObject):
     :rtype: str
     """
     # Send a POST request to the export animations endpoint.
-    response = session.post(f"https://www.mixamo.com/api/v1/animations/export",
+    response = self.make_request("POST",
+      f"https://www.mixamo.com/api/v1/animations/export",
       data=payload,
       headers=HEADERS)
 
@@ -364,7 +373,8 @@ class MixamoDownloader(QtCore.QObject):
       time.sleep(1)
 
       # Send a GET request to the monitor endpoint.
-      response = session.get(f"https://www.mixamo.com/api/v1/characters/{character_id}/monitor",
+      response = self.make_request("GET",
+        f"https://www.mixamo.com/api/v1/characters/{character_id}/monitor",
         headers=HEADERS)
 
       # The loop will end as soon as the status is 'completed'.
@@ -385,7 +395,7 @@ class MixamoDownloader(QtCore.QObject):
     # Ensure this code is only run if a URL has been retrieved.
     if url:
       # Send a GET request to the download link.
-      response = session.get(url)
+      response = self.make_request("GET", url)
 
       # Check if the output folder exists on disk. If it doesn't, create it.
       if self.path:
