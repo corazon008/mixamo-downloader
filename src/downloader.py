@@ -65,14 +65,14 @@ class MixamoDownloader(QtCore.QObject):
 
   def run(self):
     try:
-      self.run2()
+      self.runImpl()
     except Exception as e:
       # Print the full exception and traceback to the console
       import traceback
       print("An error occurred:")
       traceback.print_exc()
 
-  def run2(self):
+  def runImpl(self):
     # Get the primary character ID and name.
     character_id = self.get_primary_character_id()
     character_name = self.get_primary_character_name()
@@ -138,7 +138,7 @@ class MixamoDownloader(QtCore.QObject):
       url = self.export_animation(character_id, anim_payload)
 
       if not url:
-        print(f'WARNING: Couldnt download anim {index+1} {anim_id}')
+        print(f'WARNING: Couldnt download animation {index+1} {anim_id} {anim_name}')
 
       #print(f"Downloading {anim_name}...")
       self.download_animation(url, index+1)
@@ -291,7 +291,7 @@ class MixamoDownloader(QtCore.QObject):
     anim_data = {}
 
     # Read the local JSON file and dump its content to the dictionary.
-    with open("mixamo_anims_20241014.json", "r") as file:
+    with open("mixamo_anims.json", "r") as file:
       anim_data = json.load(file)
 
     # Let the UI know how many animations are to be downloaded.    
@@ -413,11 +413,10 @@ class MixamoDownloader(QtCore.QObject):
   def sanitize_filename(self, filename):
     # Define a regular expression pattern to match disallowed characters
     # This pattern includes common problematic characters
-    #pattern = r'[<>:"/\\|?*\n]'
-    #pattern = r'[<>:"/\\|?*\n\',.-]' # extra chars: "',-./\
-    pattern = "[^a-zA-Z0-9_ ]"
+    #pattern = r'[<>:"/\\|?*\n]' # extra possible chars: ',.-
+    pattern = "[^a-zA-Z0-9_ ]" # even more strict, no symbols
 
-    # Replace them with an underscore or any other character you prefer
+    # Remove the problematic characters
     sanitized_filename = re.sub(pattern, '', filename)
 
     # Replace multiple spaces with a single space and remove start-ending spaces

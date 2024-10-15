@@ -1,20 +1,28 @@
 # Mixamo Downloader
 GUI to bulk download animations from [Mixamo](https://www.mixamo.com/).
 
-This repository contains both the Python source code (in the `/src` folder) and an `.exe` file (in the `/dist` folder) to make things easier to Windows users.
+This repository contains the Python source code in the `/src` folder. The `.exe` file in the `/dist` folder has been removed.
 
-### For Python users
+### Main Fork Changes
+This fork introduces the following main changes from the original [juanjo4martinez/mixamo-downloader](https://github.com/juanjo4martinez/mixamo-downloader):
+- updates `mixamo_anims.json` to contain all animations as of October 14th, 2024, which is 100 more than the original repo.
+- provides a script `getids.py` to scrape all new animations and create updated `mixamo_anims.json`
+- fixes an error that was causing the script to getting stuck on a few animations. If an animation cannot be downloaded after 10 tries, it's logged as a warning and skipped.
+- prints errors, if any, in the console
+- saves files as `{index}_{anim_desc}.fbx`, to avoid animations with the same description from overwriting each other
+- has a more robust request mechanism (inspired from [jonnytracker/mixamo-downloader](https://github.com/jonnytracker/mixamo-downloader/tree/patch-1)
+- sanitizes animation names when saving to prevent errors (inspired from [ALK222/mixamo-downloader](https://github.com/ALK222/mixamo-downloader/tree/main)
+
+### Running the script
 
 Make sure you have [Python 3.10+](https://www.python.org/) installed on your computer, as well as the [PySide2](https://pypi.org/project/PySide2/) package:
 
 ```bash
 pip install PySide2
+pip install requests
 ```
 
 Download the files from the `/src` folder to your own local directory, and double-click on the `main.pyw` script to launch the GUI.
-
-### For non-technical users
-If you don't have Python installed on your computer or you don't want to mess with all that coding stuff, download the `/dist` folder to your computer (~300MB) and run the `mixamo_downloader.exe`.
 
 ## How to use the Mixamo Downloader
 
