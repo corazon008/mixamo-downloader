@@ -115,15 +115,12 @@ class MixamoDownloader(QtCore.QObject):
     # The following code will be run for both the "all" and "query" modes.
     # Iterate the animation IDs and names dictionary.
     skip = 0
-    #index = 0
 
-    #for anim_id, anim_name in anim_data.items():
     for index, (anim_id, anim_name) in enumerate(anim_data.items()):
-      print(f"processing {index} {anim_id}: {anim_name}")
+      #print(f"processing {index+1} {anim_id}: {anim_name}")
       if index < skip:
         self.current_task.emit(self.task)
         self.task += 1
-        #index += 1
         continue
 
       # Check if the 'Stop' button has been pressed in the UI.
@@ -140,9 +137,11 @@ class MixamoDownloader(QtCore.QObject):
       anim_payload = self.build_animation_payload(character_id, anim_id)
       url = self.export_animation(character_id, anim_payload)
 
+      if not url:
+        print(f'WARNING: Couldnt download anim {index+1} {anim_id}')
+
       #print(f"Downloading {anim_name}...")
       self.download_animation(url, index+1)
-      #index += 1
 
     print("DOWNLOAD COMPLETE.")
     # Emit the 'finished' signal to let the UI know that worker is done.
@@ -390,7 +389,8 @@ class MixamoDownloader(QtCore.QObject):
     status = None
 
     # Check if the process is completed and retry if it's not.
-    while status != "completed":
+    itersLeft = 10
+    while status != "completed" and itersLeft > 0:
       # Add some delay between retries to avoid overflow. 
       time.sleep(1)
 
@@ -401,12 +401,14 @@ class MixamoDownloader(QtCore.QObject):
 
       # The loop will end as soon as the status is 'completed'.
       status = response.json().get("status")
+      itersLeft -= 1
     
     # Grab the download link from the response.
     if status == "completed":
       download_link = response.json().get("job_result")
 
       return download_link
+    return None
 
   def sanitize_filename(self, filename):
     # Define a regular expression pattern to match disallowed characters
