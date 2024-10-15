@@ -3,6 +3,7 @@ import json
 import os
 import requests
 import time
+import re
 
 # Third-party modules
 from PySide2 import QtCore, QtWebEngineWidgets, QtWidgets
@@ -63,6 +64,15 @@ class MixamoDownloader(QtCore.QObject):
     self.query = query
 
   def run(self):
+    try:
+      self.run2()
+    except Exception as e:
+      # Print the full exception and traceback to the console
+      import traceback
+      print("An error occurred:")
+      traceback.print_exc()
+
+  def run2(self):
     # Get the primary character ID and name.
     character_id = self.get_primary_character_id()
     character_name = self.get_primary_character_name()
@@ -70,6 +80,7 @@ class MixamoDownloader(QtCore.QObject):
     # If there's no character ID, it means that there was some problem
     # with the access token, so we better stop the code at this point. 
     if not character_id:
+      print("No character_id. Exiting")
       return
 
     # DOWNLOAD MODE: TPOSE
@@ -103,13 +114,17 @@ class MixamoDownloader(QtCore.QObject):
 
     # The following code will be run for both the "all" and "query" modes.
     # Iterate the animation IDs and names dictionary.
-    skip = 383
-    index = 0
-    #for index, (anim_id, anim_name) in enumerate(anim_data.items()):
-    for anim_id, anim_name in anim_data.items():
-      #if index < skip:
-      #  index += 1
-      #  continue
+    skip = 0
+    #index = 0
+
+    #for anim_id, anim_name in anim_data.items():
+    for index, (anim_id, anim_name) in enumerate(anim_data.items()):
+      print(f"processing {index} {anim_id}: {anim_name}")
+      if index < skip:
+        self.current_task.emit(self.task)
+        self.task += 1
+        #index += 1
+        continue
 
       # Check if the 'Stop' button has been pressed in the UI.
       if self.stop:
@@ -127,9 +142,9 @@ class MixamoDownloader(QtCore.QObject):
 
       #print(f"Downloading {anim_name}...")
       self.download_animation(url, index+1)
-      index += 1
+      #index += 1
 
-    #print("DOWNLOAD COMPLETE.")
+    print("DOWNLOAD COMPLETE.")
     # Emit the 'finished' signal to let the UI know that worker is done.
     self.finished.emit()
     return
@@ -393,6 +408,21 @@ class MixamoDownloader(QtCore.QObject):
 
       return download_link
 
+  def sanitize_filename(self, filename):
+    # Define a regular expression pattern to match disallowed characters
+    # This pattern includes common problematic characters
+    #pattern = r'[<>:"/\\|?*\n]'
+    #pattern = r'[<>:"/\\|?*\n\',.-]' # extra chars: "',-./\
+    pattern = "[^a-zA-Z0-9_ ]"
+
+    # Replace them with an underscore or any other character you prefer
+    sanitized_filename = re.sub(pattern, '', filename)
+
+    # Replace multiple spaces with a single space and remove start-ending spaces
+    sanitized_filename = re.sub(r'\s+', ' ', sanitized_filename).strip()
+
+    return sanitized_filename
+
   def download_animation(self, url, index):
     """Download the animation to disk.
 
@@ -404,20 +434,22 @@ class MixamoDownloader(QtCore.QObject):
       # Send a GET request to the download link.
       response = self.make_request("GET", url)
 
+      file_name = f"{index}_{self.sanitize_filename(self.product_name)}"
+
       # Check if the output folder exists on disk. If it doesn't, create it.
       if self.path:
         if not os.path.exists(self.path):
           os.mkdir(self.path)
 
         # Save the response into a new FBX file called after the animation name.
-        open(f"{self.path}/{index}_{self.product_name}.fbx", "wb").write(response.content)
+        open(f"{self.path}/{file_name}.fbx", "wb").write(response.content)
 
       # If no output path has been set by the user, save the FBX to the cwd
       # (i.e: the folder where this Python script is being executed).
       else:
-        open(f"{self.product_name}.fbx", "wb").write(response.content)
+        open(f"{file_name}.fbx", "wb").write(response.content)
 
-      # Let the UI know that a task has been completed.
-      self.current_task.emit(self.task)
-      # Increase the counter by one.
-      self.task += 1
+    # Let the UI know that a task has been completed.
+    self.current_task.emit(self.task)
+    # Increase the counter by one.
+    self.task += 1
