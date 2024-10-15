@@ -84,7 +84,7 @@ class MixamoDownloader(QtCore.QObject):
       url = self.export_animation(character_id, tpose_payload)
 
       #print(f"Downloading T-Pose (with skin) for {character_name}...")
-      self.download_animation(url)
+      self.download_animation(url, 0)
       #print(f"T-Pose successfully downloaded.")
 
       # Emit the 'finished' signal to let the UI know that worker is done.
@@ -103,7 +103,13 @@ class MixamoDownloader(QtCore.QObject):
 
     # The following code will be run for both the "all" and "query" modes.
     # Iterate the animation IDs and names dictionary.
+    skip = 383
+    index = 0
+    #for index, (anim_id, anim_name) in enumerate(anim_data.items()):
     for anim_id, anim_name in anim_data.items():
+      #if index < skip:
+      #  index += 1
+      #  continue
 
       # Check if the 'Stop' button has been pressed in the UI.
       if self.stop:
@@ -120,7 +126,8 @@ class MixamoDownloader(QtCore.QObject):
       url = self.export_animation(character_id, anim_payload)
 
       #print(f"Downloading {anim_name}...")
-      self.download_animation(url)
+      self.download_animation(url, index+1)
+      index += 1
 
     #print("DOWNLOAD COMPLETE.")
     # Emit the 'finished' signal to let the UI know that worker is done.
@@ -270,7 +277,7 @@ class MixamoDownloader(QtCore.QObject):
     anim_data = {}
 
     # Read the local JSON file and dump its content to the dictionary.
-    with open("mixamo_anims.json", "r") as file:
+    with open("mixamo_anims_20241014.json", "r") as file:
       anim_data = json.load(file)
 
     # Let the UI know how many animations are to be downloaded.    
@@ -386,7 +393,7 @@ class MixamoDownloader(QtCore.QObject):
 
       return download_link
 
-  def download_animation(self, url):
+  def download_animation(self, url, index):
     """Download the animation to disk.
 
     :param url: URL to download the animation
@@ -403,7 +410,7 @@ class MixamoDownloader(QtCore.QObject):
           os.mkdir(self.path)
 
         # Save the response into a new FBX file called after the animation name.
-        open(f"{self.path}/{self.product_name}.fbx", "wb").write(response.content)
+        open(f"{self.path}/{index}_{self.product_name}.fbx", "wb").write(response.content)
 
       # If no output path has been set by the user, save the FBX to the cwd
       # (i.e: the folder where this Python script is being executed).
