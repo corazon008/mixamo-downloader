@@ -24,23 +24,23 @@ def make_request(method, url, **kwargs):
             continue
     raise Exception(f"Failed to complete request to {url} after 10 retries.")
 
-def get_animations_data():
+def get_character_data():
     params = {
       "limit": 96,
       "page": 0,
-      "type": "Motion",
+      "type": "Character",
       #"query": query,
     }
     response = make_request("GET", "https://www.mixamo.com/api/v1/products", headers=HEADERS, params=params)
     data = response.json()
     num_pages = data["pagination"]["num_pages"]
-    animations = []
+    characters = []
 
     print(f"numpages={num_pages}")
 
-    # for some reason, it seems not all animations are returned in a single pass.
-    # Therefore we run the query multiple times and then de-duplicate to ensure all animations are included.
-    runs = 20
+    # for some reason, it seems not all items are returned in a single pass.
+    # Therefore we run the query multiple times and then de-duplicate to ensure all items are included.
+    runs = 1
     for run in range(runs):
         print(f'run={run+1}/{runs}')
         for page_num in range(num_pages+1):
@@ -48,34 +48,38 @@ def get_animations_data():
             params["page"] = page_num
             response = make_request("GET", "https://www.mixamo.com/api/v1/products", headers=HEADERS, params=params)
             data = response.json()
-            animations.extend(data["results"])
-        print(f"  total={len(animations)}")
+            characters.extend(data["results"])
+        print(f"  total={len(characters)}")
 
-    anim_data = {animation["id"]: animation for animation in animations}
-    return anim_data
+    char_data = {character["id"]: character for character in characters}
+    return char_data
 
-def make_table(animations):
-    with open('animations_table.md', 'w') as file:
-        file.write(f"| ID | Name | Description | Media |\n")
-        file.write(f"|----|------|-------------|-------|\n")
-        for id, animation in animations.items():
-            assert animation['type'] == 'Motion'
-            assert animation['category'] == ''
-            assert animation['character_type'] == 'human'
-            media_id = re.search(r'/motions/(\d+)/', animation['thumbnail']).group(1)
-            assert animation['thumbnail'] == f'https://d99n9xvb9513w.cloudfront.net/thumbnails/motions/{media_id}/static.png'
-            assert animation['thumbnail_animated'] == f'https://d99n9xvb9513w.cloudfront.net/thumbnails/motions/{media_id}/animated.gif'
-            assert animation['motion_id'] == animation['id']
-            assert animation['motions'] == None
-            assert animation['source'] == 'system'
-            file.write(f"| {animation['id']} | {animation['name']} | {animation['description']} | {media_id} [PNG]({animation['thumbnail']}) [GIF]({animation['thumbnail_animated']}) |\n")
+def make_table(characters):
+    with open('characters_table.md', 'w') as file:
+        file.write(f"| ID | Name | Media |\n")
+        file.write(f"|----|------|-------|\n")
+        for id, character in characters.items():
+            assert character['type'] == 'Character'
+            assert character['description'] == ''
+            assert character['category'] == ''
+            assert character['character_type'] == 'human'
+            #media_id = re.search(r'/characters/([\d-]+)/', character['thumbnail']).group(1)
+            id   = character['id']
+            assert character['thumbnail'] == f'https://www.mixamo.com/api/v1/characters/{id}/assets/thumbnails/static.png'
+            assert character['thumbnail_animated'] == character['thumbnail']
+            assert character['motion_id'] == None
+            assert character['motions'] == None
+            assert character['source'] == 'system'
+            #file.write(f"| {character['id']} | {character['name']} | ![PNG]({character['thumbnail']}) |\n")
+            imgsrc = character['thumbnail']
+            file.write(f"| {character['id']} | {character['name']} | <img src=\"{imgsrc}\" height=\"60\" > [PNG]({imgsrc}) |\n")
 
 
-animations = get_animations_data()
-print(f"found {len(animations)} unique animations")
+characters = get_character_data()
+print(f"found {len(characters)} unique characters")
 
-anim_ans = {anim['id']: anim['description'] for id, anim in animations.items()}
-with open("mixamo_anims_new.json", 'w') as json_file:
-    json.dump(anim_ans, json_file, indent=4)  # `indent=4` for pretty printing
+#anim_ans = {anim['id']: anim['description'] for id, anim in animations.items()}
+with open("mixamo_chars.json", 'w') as json_file:
+    json.dump(characters, json_file, indent=4)  # `indent=4` for pretty printing
 
-make_table(animations)
+make_table(characters)
