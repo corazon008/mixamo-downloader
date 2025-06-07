@@ -327,7 +327,7 @@ class MixamoDownloader(QtCore.QObject):
     # NOTE: Changing the 'skin' key to True doesn't seem to have any effect.
     preferences =   {
       "format": "fbx7_2019",
-      "skin": False,
+      "mesh_motionpack": "t-pose",
       "fps": "60",
       "reducekf": "0",
     }
@@ -340,15 +340,24 @@ class MixamoDownloader(QtCore.QObject):
       new_temp_gms = motion["gms_hash"]
       new_temp_gms["name"] = motion["name"]
       new_temp_gms["overdrive"] = 0
-      new_temp_gms["params"] = "0"
+
+      param_values = [int(param[-1]) for param in new_temp_gms["params"]]
+
+      # Build a 'params' string depending on how many params the animation has.
+      # For example, if there are two params (Overdrive and Emotion), and their
+      # values are 1 and 0, the string will be "1,0".
+      params_string = ",".join(str(val) for val in param_values)
+
+      new_temp_gms["params"] = params_string
       gms_hash_final.append(new_temp_gms)
 
     # Build the payload.
     payload = {
         "character_id": character_id,
         "product_name": self.product_name,
+        "preferences": preferences,
         "type": _type,
-        "gms_hash": gms_hash,
+        "gms_hash": gms_hash_final,
     }
 
     # Convert the payload dictionary into a JSON string.

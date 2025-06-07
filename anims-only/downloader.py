@@ -328,7 +328,7 @@ class MixamoDownloader(QtCore.QObject):
     preferences =   {
       "format": "fbx7_2019",
       "skin": False,
-      "fps": "30",
+      "fps": "60",
       "reducekf": "0",
     }
 
