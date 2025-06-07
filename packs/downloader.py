@@ -17,6 +17,8 @@ HEADERS = {
 "X-Requested-With": "XMLHttpRequest",
 }
 
+MAX_ITER_CHECK_EXPORT = 15
+
 # All requests will be done through a session to improve performance.
 session = requests.Session()
 
@@ -45,7 +47,7 @@ class MixamoDownloader(QtCore.QObject):
   # Initialize a flag that tells the code to stop.
   stop = False
 
-  def __init__(self, path, mode, query=None):
+  def __init__(self, path, mode, query=None, is_retry=False):
     """Initialize the Mixamo Downloader object.
 
     :param path: Output folder path
@@ -62,6 +64,7 @@ class MixamoDownloader(QtCore.QObject):
     self.path = path
     self.mode = mode
     self.query = query
+    self.is_retry = is_retry
 
   def run(self):
     try:
@@ -135,6 +138,24 @@ class MixamoDownloader(QtCore.QObject):
 
       # Build the animation payload, export and download it to disk.
       anim_payload = self.build_animation_payload(character_id, anim_id)
+
+      if self.is_retry:
+        file_name = f"{index+1}_{self.sanitize_filename(self.product_name)}"
+        if self.path:
+          if os.path.exists(f"{self.path}/{file_name}.zip"):
+            print(f"File {file_name} already exists, skipping")
+            self.current_task.emit(self.task)
+            # Increase the counter by one.
+            self.task += 1
+            continue
+        else:
+          if os.path.exists(f"{file_name}.zip"):
+            print(f"File {file_name} already exists, skipping")
+            self.current_task.emit(self.task)
+            # Increase the counter by one.
+            self.task += 1
+            continue
+
       url = self.export_animation(character_id, anim_payload)
 
       if not url:
@@ -387,7 +408,7 @@ class MixamoDownloader(QtCore.QObject):
     status = None
 
     # Check if the process is completed and retry if it's not.
-    itersLeft = 10
+    itersLeft = MAX_ITER_CHECK_EXPORT
     while status != "completed" and itersLeft > 0:
       # Add some delay between retries to avoid overflow. 
       time.sleep(1)

@@ -79,6 +79,9 @@ class MixamoDownloaderUI(QtWidgets.QMainWindow):
 
         self.rb_tpose = QtWidgets.QRadioButton("T-Pose (with skin)")
 
+        self.cb_retry = QtWidgets.QCheckBox("Retry failed downloads")
+        self.cb_retry.setChecked(True)
+
         # The line edit is to be enabled only when using the query option.
         self.rb_query.toggled.connect(lambda: self.le_query.setEnabled(True))
         self.rb_all.toggled.connect(lambda: self.le_query.setEnabled(False))
@@ -89,6 +92,7 @@ class MixamoDownloaderUI(QtWidgets.QMainWindow):
         anim_opt_lyt.addWidget(self.rb_query)
         anim_opt_lyt.addWidget(self.le_query)
         anim_opt_lyt.addWidget(self.rb_tpose)
+        anim_opt_lyt.addWidget(self.cb_retry)
 
         # Add another horizontal layout to the footer.
         # This layout will contain the Output Folder group box.
@@ -195,9 +199,10 @@ class MixamoDownloaderUI(QtWidgets.QMainWindow):
         mode = self.get_mode()
         query = self.le_query.text()
         path = self.le_path.text()
+        is_retry = self.cb_retry.isChecked()
 
         # Create a MixamoDownloader instance and move it to the new thread.
-        self.worker = MixamoDownloader(path, mode, query)
+        self.worker = MixamoDownloader(path, mode, query, is_retry)
         self.worker.moveToThread(self.thread)
 
         # As soon as the thread is started, the run method on the worker
