@@ -1,4 +1,7 @@
 # Third-party modules
+import os
+os.environ["QTWEBENGINE_CHROMIUM_FLAGS"] = "--disable-gpu"
+
 from PySide2 import QtWidgets
 
 # Local modules

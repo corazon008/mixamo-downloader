@@ -142,14 +142,14 @@ class MixamoDownloader(QtCore.QObject):
       if self.is_retry:
         file_name = f"{index+1}_{self.sanitize_filename(self.product_name)}"
         if self.path:
-          if os.path.exists(f"{self.path}/{file_name}.zip"):
+          if os.path.exists(f"{self.path}/{file_name}.fbx"):
             print(f"File {file_name} already exists, skipping")
             self.current_task.emit(self.task)
             # Increase the counter by one.
             self.task += 1
             continue
         else:
-          if os.path.exists(f"{file_name}.zip"):
+          if os.path.exists(f"{file_name}.fbx"):
             print(f"File {file_name} already exists, skipping")
             self.current_task.emit(self.task)
             # Increase the counter by one.
@@ -413,7 +413,7 @@ class MixamoDownloader(QtCore.QObject):
     itersLeft = MAX_ITER_CHECK_EXPORT
     while status != "completed" and itersLeft > 0:
       # Add some delay between retries to avoid overflow. 
-      time.sleep(1)
+      time.sleep(1.5)
 
       # Send a GET request to the monitor endpoint.
       response = self.make_request("GET",
